@@ -42,7 +42,7 @@ public class Quarto {
         return valorDiaria;
     }
     
-    public void setValorDiaria(){
+    public void setValorDiaria(double valorDiaria){
         this.valorDiaria = valorDiaria;
     }
     
