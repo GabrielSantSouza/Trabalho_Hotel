@@ -49,14 +49,13 @@ public class Sistema {
     }
     
     public Hospede buscarHospede(String cpf) throws EntidadeNaoEncontradaException{
-        for (int i = 0; i < hospedes.size(); i++){
-            if(hospedes.get(i).getCPF().equals(cpf)){
-                return hospedes.get(i);
-            }
+    for (int i = 0; i < hospedes.size(); i++){
+        if(hospedes.get(i).getCPF().equals(cpf)){
+            return hospedes.get(i);
         }
-        
-        throw new EntidadeNaoEncontradaException("Não encontramos nenhum hóspede com o CPF" + cpf);
     }
+    throw new EntidadeNaoEncontradaException("Não encontramos nenhum hóspede com o CPF " + cpf);                                                   ↑
+}
     
     public void atualizarHospede(String cpf, String novoNome, String novaDtNascimento) throws EntidadeNaoEncontradaException{
         Hospede h = buscarHospede(cpf);
@@ -82,12 +81,13 @@ public class Sistema {
     */
     
     public void cadastrarQuarto(Quarto q) throws RegraNegocioException{
-        for(int i=0; i< quartos.size(); i++){
-            if(quartos.get(i).getNumero() == q.getNumero()){
-                throw new RegraNegocioException("Quarto já cadastrado");
-            }
+    for(int i=0; i< quartos.size(); i++){
+        if(quartos.get(i).getNumero() == q.getNumero()){
+            throw new RegraNegocioException("Quarto já cadastrado");
         }
     }
+    quartos.add(q);
+}
     
     public Quarto buscarQuarto(int numero) throws EntidadeNaoEncontradaException{
          for(int i=0; i< quartos.size(); i++){
@@ -144,23 +144,24 @@ public class Sistema {
         RESERVAS  --------------------------------------------------------------------------
     */
     
-    public void realizarCheckin(String cpf, int numQuarto, Date checkIn, Date checkOut) throws EntidadeNaoEncontradaException, RegraNegocioException{
-        Hospede hospede = buscarHospede(cpf);
-        Quarto quarto = buscarQuarto(numQuarto);
-        
-        if(quarto.isOcupado()){
-            throw new RegraNegocioException("o quarto "+numQuarto+"já está ocupado");
-        }
-        
-        if(checkIn.after(checkOut)){
-            throw new RegraNegocioException("Data de entrada maior do que data de saída");
-                    
-        }
-        
-        quarto.setOcupado(true);
-        Reserva novaReserva = new Reserva(geraIdReserva++, checkIn, checkOut, true, hospede, quarto);
-        reservas.add(novaReserva);
+    public void realizarCheckin(String cpf, int numQuarto, Date checkIn, Date checkOut) 
+    throws EntidadeNaoEncontradaException, RegraNegocioException{
+    
+    Hospede hospede = buscarHospede(cpf);
+    Quarto quarto = buscarQuarto(numQuarto);
+    
+    if(quarto.isOcupado()){
+        throw new RegraNegocioException("O quarto " + numQuarto + " já está ocupado");
     }
+    
+    if(checkIn.after(checkOut)){
+        throw new RegraNegocioException("Data de entrada maior do que data de saída");
+    }
+    
+    quarto.setOcupado(true);
+    Reserva novaReserva = new Reserva(geraIdReserva++, checkIn, checkOut, true, hospede, quarto);
+    reservas.add(novaReserva);
+}
     
     public Reserva buscarReserva(int idReserva) throws EntidadeNaoEncontradaException{
         for(int i=0; i<reservas.size();i++){
@@ -208,4 +209,57 @@ public class Sistema {
         return filtradas;
     }
     
+}
+    public void atualizarReserva(int idReserva, Date novoCheckIn, Date novoCheckOut, int novoNumeroQuarto) 
+    throws EntidadeNaoEncontradaException, RegraNegocioException {
+    
+    Reserva reserva = buscarReserva(idReserva);
+    
+    if (!reserva.isAtiva()) {
+        throw new RegraNegocioException("Não é possível alterar uma reserva já finalizada.");
+    }
+    
+    // Validar datas
+    if (novoCheckIn.after(novoCheckOut)) {
+        throw new RegraNegocioException("Data de check-in não pode ser após o check-out.");
+    }
+    
+    // Se for alterar o quarto
+    if (novoNumeroQuarto != reserva.getQuarto().getNumero()) {
+        Quarto novoQuarto = buscarQuarto(novoNumeroQuarto);
+        
+        if (novoQuarto.isOcupado()) {
+            throw new RegraNegocioException("O quarto " + novoNumeroQuarto + " está ocupado.");
+        }
+        
+        // Liberar quarto antigo
+        reserva.getQuarto().setOcupado(false);
+        
+        // Ocupar novo quarto
+        novoQuarto.setOcupado(true);
+        reserva.setQuarto(novoQuarto);
+    }
+    
+    // Atualizar datas
+    reserva.setDataCheckIn(novoCheckIn);
+    reserva.setDataCheckOut(novoCheckOut);
+}
+    /*
+    Remover Reserva  --------------------------------------------------------------------------
+*/
+
+public void removerReserva(int idReserva) 
+    throws EntidadeNaoEncontradaException, RegraNegocioException {
+    
+    Reserva reserva = buscarReserva(idReserva);
+    
+    if (reserva.isAtiva()) {
+        throw new RegraNegocioException("Não é possível remover uma reserva ativa. Realize o check-out primeiro.");
+    }
+    
+    if (reserva.getQuarto().isOcupado()) {
+        reserva.getQuarto().setOcupado(false);
+    }
+    
+    reservas.remove(reserva);
 }
