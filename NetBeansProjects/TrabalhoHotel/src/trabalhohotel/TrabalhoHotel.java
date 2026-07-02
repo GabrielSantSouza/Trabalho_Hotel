@@ -12,38 +12,21 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
-import modelos.Funcionario;
 import modelos.Hospede;
 import modelos.Quarto;
 import modelos.Reserva;
 
 /**
- * Classe principal do sistema de gerenciamento de hotel
- * Contém o menu interativo e toda a interface com o usuário
- * 
+ *
  * @author gabriel
  */
 public class TrabalhoHotel {
 
-    // ==================== ATRIBUTOS ESTÁTICOS ====================
-    
-    /** Instância do sistema que gerencia os dados */
     private static Sistema sistema = new Sistema();
-    
-    /** Scanner para leitura de dados do usuário */
     private static Scanner scanner = new Scanner(System.in);
-    
-    /** Formato de data utilizado em todo o sistema (dd/MM/yyyy) */
     private static SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
-    // ==================== MÉTODO PRINCIPAL ====================
-    
-    /**
-     * Método principal - ponto de entrada do sistema
-     * Inicializa o sistema e exibe o menu principal
-     */
     public static void main(String[] args) {
-        // Inicializar o sistema com dados padrão
         sistema.init();
         
         int opcao;
@@ -77,11 +60,6 @@ public class TrabalhoHotel {
         scanner.close();
     }
 
-    // ==================== MENU PRINCIPAL ====================
-    
-    /**
-     * Exibe o menu principal do sistema
-     */
     private static void exibirMenuPrincipal() {
         System.out.println("\n+--------------------------------------------------+");
         System.out.println("|       SISTEMA DE GERENCIAMENTO DE HOTEL          |");
@@ -94,11 +72,168 @@ public class TrabalhoHotel {
         System.out.println("+--------------------------------------------------+");
     }
 
-    // ==================== MENU HOSPEDES ====================
+    // ==================== VALIDACOES E FORMATACAO ====================
     
-    /**
-     * Exibe o menu de gerenciamento de hospedes
-     */
+    private static boolean validarCPF(String cpf) {
+        String cpfLimpo = cpf.replaceAll("[^0-9]", "");
+        
+        if (cpfLimpo.length() != 11) {
+            return false;
+        }
+        
+        boolean todosIguais = true;
+        for (int i = 1; i < 11; i++) {
+            if (cpfLimpo.charAt(i) != cpfLimpo.charAt(0)) {
+                todosIguais = false;
+                break;
+            }
+        }
+        if (todosIguais) {
+            return false;
+        }
+        
+        int soma = 0;
+        for (int i = 0; i < 9; i++) {
+            soma += (cpfLimpo.charAt(i) - '0') * (10 - i);
+        }
+        int primeiroDigito = 11 - (soma % 11);
+        if (primeiroDigito >= 10) {
+            primeiroDigito = 0;
+        }
+        
+        if ((cpfLimpo.charAt(9) - '0') != primeiroDigito) {
+            return false;
+        }
+        
+        soma = 0;
+        for (int i = 0; i < 10; i++) {
+            soma += (cpfLimpo.charAt(i) - '0') * (11 - i);
+        }
+        int segundoDigito = 11 - (soma % 11);
+        if (segundoDigito >= 10) {
+            segundoDigito = 0;
+        }
+        
+        if ((cpfLimpo.charAt(10) - '0') != segundoDigito) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private static String formatarCPF(String cpf) {
+        String cpfLimpo = cpf.replaceAll("[^0-9]", "");
+        if (cpfLimpo.length() != 11) {
+            return null;
+        }
+        return cpfLimpo.substring(0, 3) + "." + 
+               cpfLimpo.substring(3, 6) + "." + 
+               cpfLimpo.substring(6, 9) + "-" + 
+               cpfLimpo.substring(9, 11);
+    }
+    
+    private static boolean validarData(String data) {
+        if (data == null || data.trim().isEmpty()) {
+            return false;
+        }
+        
+        try {
+            sdf.setLenient(false);
+            sdf.parse(data);
+            return true;
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+    
+    private static boolean validarDataNascimento(String dtNascimento) {
+        if (!validarData(dtNascimento)) {
+            return false;
+        }
+        
+        try {
+            sdf.setLenient(false);
+            Date dataNascimento = sdf.parse(dtNascimento);
+            Date dataAtual = new Date();
+            
+            if (dataNascimento.after(dataAtual)) {
+                return false;
+            }
+            
+            long diff = dataAtual.getTime() - dataNascimento.getTime();
+            long idadeEmMilissegundos = 18L * 365 * 24 * 60 * 60 * 1000;
+            
+            if (diff < idadeEmMilissegundos) {
+                return false;
+            }
+            
+            return true;
+            
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+    
+    private static boolean validarPeriodoReserva(String checkIn, String checkOut) {
+        if (!validarData(checkIn) || !validarData(checkOut)) {
+            return false;
+        }
+        
+        try {
+            sdf.setLenient(false);
+            Date dataCheckIn = sdf.parse(checkIn);
+            Date dataCheckOut = sdf.parse(checkOut);
+            
+            return dataCheckIn.before(dataCheckOut);
+            
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+    
+    private static boolean validarCheckInFuturo(String checkIn) {
+        if (!validarData(checkIn)) {
+            return false;
+        }
+        
+        try {
+            sdf.setLenient(false);
+            Date dataCheckIn = sdf.parse(checkIn);
+            Date dataAtual = new Date();
+            
+            return dataCheckIn.after(dataAtual) || dataCheckIn.equals(dataAtual);
+            
+        } catch (ParseException e) {
+            return false;
+        }
+    }
+
+    // ==================== LEITURA COM FORMATACAO ====================
+    
+    private static String lerCPF(String mensagem) {
+        System.out.print(mensagem);
+        String cpf = scanner.nextLine();
+        cpf = cpf.replaceAll("[^0-9]", "");
+        
+        if (cpf.length() == 11) {
+            return formatarCPF(cpf);
+        }
+        return cpf;
+    }
+    
+    private static String lerData(String mensagem) {
+        System.out.print(mensagem);
+        String data = scanner.nextLine();
+        data = data.replaceAll("[^0-9]", "");
+        
+        if (data.length() == 8) {
+            return data.substring(0, 2) + "/" + data.substring(2, 4) + "/" + data.substring(4, 8);
+        }
+        return data;
+    }
+
+    // ==================== MENU HOSPEDES ====================
+
     private static void menuHospedes() {
         int opcao;
         do {
@@ -140,16 +275,29 @@ public class TrabalhoHotel {
         } while (opcao != 0);
     }
 
-    /**
-     * Cadastra um novo hospede no sistema
-     */
     private static void cadastrarHospede() {
         System.out.println("\n--- CADASTRO DE HOSPEDE ---");
         try {
             int id = lerInteiro("ID do hospede: ");
             String nome = lerString("Nome: ");
-            String cpf = lerString("CPF (formato: 000.000.000-00): ");
-            String dtNascimento = lerString("Data de Nascimento (formato: dd/MM/yyyy): ");
+            String cpf = lerCPF("CPF (Digite apenas os numeros): ");
+            
+            if (!validarCPF(cpf)) {
+                System.out.println("\n[ERRO] CPF invalido! Digite 11 numeros.");
+                return;
+            }
+            
+            cpf = formatarCPF(cpf);
+            System.out.println("CPF formatado: " + cpf);
+            
+            String dtNascimento = lerData("Data de Nascimento (Digite apenas os numeros): ");
+            
+            if (!validarDataNascimento(dtNascimento)) {
+                System.out.println("\n[ERRO] Data de nascimento invalida! O hospede deve ter pelo menos 18 anos.");
+                return;
+            }
+            
+            System.out.println("Data formatada: " + dtNascimento);
             
             Hospede hospede = new Hospede(id, nome, cpf, dtNascimento);
             sistema.cadastrarHospede(hospede);
@@ -162,13 +310,19 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Busca e exibe um hospede pelo CPF
-     */
     private static void buscarHospede() {
         System.out.println("\n--- BUSCAR HOSPEDE ---");
         try {
-            String cpf = lerString("Informe o CPF do hospede: ");
+            String cpf = lerCPF("Informe o CPF do hospede (Digite apenas os numeros): ");
+            
+            if (!validarCPF(cpf)) {
+                System.out.println("\n[ERRO] CPF invalido! Digite 11 numeros.");
+                return;
+            }
+            
+            cpf = formatarCPF(cpf);
+            System.out.println("Buscando CPF: " + cpf);
+            
             Hospede hospede = sistema.buscarHospede(cpf);
             
             System.out.println("\n[SUCESSO] Hospede encontrado:");
@@ -182,15 +336,28 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Atualiza os dados de um hospede existente
-     */
     private static void atualizarHospede() {
         System.out.println("\n--- ATUALIZAR HOSPEDE ---");
         try {
-            String cpf = lerString("Informe o CPF do hospede: ");
+            String cpf = lerCPF("Informe o CPF do hospede (Digite apenas os numeros): ");
+            
+            if (!validarCPF(cpf)) {
+                System.out.println("\n[ERRO] CPF invalido! Digite 11 numeros.");
+                return;
+            }
+            
+            cpf = formatarCPF(cpf);
+            System.out.println("Buscando CPF: " + cpf);
+            
             String novoNome = lerString("Novo nome: ");
-            String novaDtNascimento = lerString("Nova data de nascimento (dd/MM/yyyy): ");
+            String novaDtNascimento = lerData("Nova data de nascimento (Digite apenas os numeros): ");
+            
+            if (!validarDataNascimento(novaDtNascimento)) {
+                System.out.println("\n[ERRO] Data de nascimento invalida! O hospede deve ter pelo menos 18 anos.");
+                return;
+            }
+            
+            System.out.println("Data formatada: " + novaDtNascimento);
             
             sistema.atualizarHospede(cpf, novoNome, novaDtNascimento);
             System.out.println("\n[SUCESSO] Hospede atualizado com sucesso!");
@@ -200,15 +367,19 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Remove um hospede do sistema (com confirmacao)
-     */
     private static void removerHospede() {
         System.out.println("\n--- REMOVER HOSPEDE ---");
         try {
-            String cpf = lerString("Informe o CPF do hospede: ");
+            String cpf = lerCPF("Informe o CPF do hospede (Digite apenas os numeros): ");
             
-            // Confirmar remocao
+            if (!validarCPF(cpf)) {
+                System.out.println("\n[ERRO] CPF invalido! Digite 11 numeros.");
+                return;
+            }
+            
+            cpf = formatarCPF(cpf);
+            System.out.println("Buscando CPF: " + cpf);
+            
             System.out.print("Tem certeza que deseja remover este hospede? (S/N): ");
             String confirmacao = scanner.nextLine().toUpperCase();
             
@@ -224,9 +395,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Lista todos os hospedes cadastrados no sistema
-     */
     private static void listarHospedes() {
         System.out.println("\n--- LISTA DE HOSPEDES ---");
         try {
@@ -253,10 +421,7 @@ public class TrabalhoHotel {
     }
 
     // ==================== MENU QUARTOS ====================
-    
-    /**
-     * Exibe o menu de gerenciamento de quartos
-     */
+
     private static void menuQuartos() {
         int opcao;
         do {
@@ -302,9 +467,6 @@ public class TrabalhoHotel {
         } while (opcao != 0);
     }
 
-    /**
-     * Cadastra um novo quarto no sistema
-     */
     private static void cadastrarQuarto() {
         System.out.println("\n--- CADASTRO DE QUARTO ---");
         try {
@@ -321,9 +483,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Busca e exibe um quarto pelo numero
-     */
     private static void buscarQuarto() {
         System.out.println("\n--- BUSCAR QUARTO ---");
         try {
@@ -341,9 +500,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Atualiza os dados de um quarto existente
-     */
     private static void atualizarQuarto() {
         System.out.println("\n--- ATUALIZAR QUARTO ---");
         try {
@@ -359,9 +515,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Remove um quarto do sistema (com confirmacao)
-     */
     private static void removerQuarto() {
         System.out.println("\n--- REMOVER QUARTO ---");
         try {
@@ -382,9 +535,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Lista todos os quartos cadastrados no sistema
-     */
     private static void listarQuartos() {
         System.out.println("\n--- LISTA DE QUARTOS ---");
         try {
@@ -410,9 +560,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Lista quartos filtrados por status (disponivel ou ocupado)
-     */
     private static void listarQuartosPorStatus() {
         System.out.println("\n--- LISTAR QUARTOS POR STATUS ---");
         try {
@@ -443,10 +590,7 @@ public class TrabalhoHotel {
     }
 
     // ==================== MENU RESERVAS ====================
-    
-    /**
-     * Exibe o menu de gerenciamento de reservas
-     */
+
     private static void menuReservas() {
         int opcao;
         do {
@@ -496,20 +640,39 @@ public class TrabalhoHotel {
         } while (opcao != 0);
     }
 
-    /**
-     * Realiza o check-in de um hospede em um quarto
-     */
     private static void realizarCheckin() {
         System.out.println("\n--- REALIZAR CHECK-IN ---");
         try {
-            String cpf = lerString("CPF do hospede: ");
+            String cpf = lerCPF("CPF do hospede (Digite apenas os numeros): ");
+            
+            if (!validarCPF(cpf)) {
+                System.out.println("\n[ERRO] CPF invalido! Digite 11 numeros.");
+                return;
+            }
+            
+            cpf = formatarCPF(cpf);
+            System.out.println("CPF formatado: " + cpf);
+            
             int numQuarto = lerInteiro("Numero do quarto: ");
             
-            System.out.print("Data de Check-in (dd/MM/yyyy): ");
-            Date checkIn = sdf.parse(scanner.nextLine());
+            String checkInStr = lerData("Data de Check-in (Digite apenas os numeros): ");
+            String checkOutStr = lerData("Data de Check-out (Digite apenas os numeros): ");
             
-            System.out.print("Data de Check-out (dd/MM/yyyy): ");
-            Date checkOut = sdf.parse(scanner.nextLine());
+            if (!validarPeriodoReserva(checkInStr, checkOutStr)) {
+                System.out.println("\n[ERRO] Periodo de reserva invalido! Check-in deve ser anterior ao check-out.");
+                return;
+            }
+            
+            if (!validarCheckInFuturo(checkInStr)) {
+                System.out.println("\n[ERRO] Data de check-in deve ser hoje ou no futuro.");
+                return;
+            }
+            
+            System.out.println("Check-in formatado: " + checkInStr);
+            System.out.println("Check-out formatado: " + checkOutStr);
+            
+            Date checkIn = sdf.parse(checkInStr);
+            Date checkOut = sdf.parse(checkOutStr);
             
             sistema.realizarCheckin(cpf, numQuarto, checkIn, checkOut);
             System.out.println("\n[SUCESSO] Check-in realizado com sucesso!");
@@ -521,9 +684,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Realiza o check-out de uma reserva e calcula o total a pagar
-     */
     private static void realizarCheckout() {
         System.out.println("\n--- REALIZAR CHECK-OUT ---");
         try {
@@ -534,7 +694,6 @@ public class TrabalhoHotel {
             System.out.println("\n[SUCESSO] Check-out realizado com sucesso!");
             System.out.println("[VALOR] Total a pagar: R$ " + String.format("%.2f", totalPago));
             
-            // Exibir detalhes da reserva finalizada
             Reserva reserva = sistema.buscarReserva(idReserva);
             System.out.println("\n--- DETALHES DA RESERVA ---");
             System.out.println("Hospede: " + reserva.getHospede().getNome());
@@ -547,9 +706,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Busca e exibe uma reserva pelo ID
-     */
     private static void buscarReserva() {
         System.out.println("\n--- BUSCAR RESERVA ---");
         try {
@@ -571,19 +727,24 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Atualiza os dados de uma reserva existente
-     */
     private static void atualizarReserva() {
         System.out.println("\n--- ATUALIZAR RESERVA ---");
         try {
             int idReserva = lerInteiro("ID da reserva: ");
             
-            System.out.print("Nova data de Check-in (dd/MM/yyyy): ");
-            Date novoCheckIn = sdf.parse(scanner.nextLine());
+            String checkInStr = lerData("Nova data de Check-in (Digite apenas os numeros): ");
+            String checkOutStr = lerData("Nova data de Check-out (Digite apenas os numeros): ");
             
-            System.out.print("Nova data de Check-out (dd/MM/yyyy): ");
-            Date novoCheckOut = sdf.parse(scanner.nextLine());
+            if (!validarPeriodoReserva(checkInStr, checkOutStr)) {
+                System.out.println("\n[ERRO] Periodo de reserva invalido! Check-in deve ser anterior ao check-out.");
+                return;
+            }
+            
+            System.out.println("Check-in formatado: " + checkInStr);
+            System.out.println("Check-out formatado: " + checkOutStr);
+            
+            Date novoCheckIn = sdf.parse(checkInStr);
+            Date novoCheckOut = sdf.parse(checkOutStr);
             
             int novoQuarto = lerInteiro("Novo numero do quarto: ");
             
@@ -597,9 +758,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Remove uma reserva do sistema (com confirmacao)
-     */
     private static void removerReserva() {
         System.out.println("\n--- REMOVER RESERVA ---");
         try {
@@ -620,9 +778,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Lista todas as reservas cadastradas no sistema
-     */
     private static void listarTodasReservas() {
         System.out.println("\n--- LISTA DE TODAS AS RESERVAS ---");
         try {
@@ -656,9 +811,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Lista reservas filtradas por status (ativa ou finalizada)
-     */
     private static void listarReservasPorStatus() {
         System.out.println("\n--- LISTAR RESERVAS POR STATUS ---");
         try {
@@ -697,11 +849,7 @@ public class TrabalhoHotel {
     }
 
     // ==================== MENU FUNCIONARIOS ====================
-    
-    /**
-     * Exibe a lista de funcionarios cadastrados no sistema
-     * Nota: Os funcionarios sao cadastrados apenas no init() e nao possuem CRUD completo
-     */
+
     private static void menuFuncionarios() {
         System.out.println("\n--- LISTA DE FUNCIONARIOS ---");
         try {
@@ -709,21 +857,11 @@ public class TrabalhoHotel {
             System.out.printf("| %-5s | %-30s | %-15s | %-15s |%n", "ID", "NOME", "CPF", "CARGO");
             System.out.println("+-------+--------------------------------+-----------------+-----------------+");
             
-            /*
-             * Nota: Os funcionarios sao cadastrados diretamente no metodo init() da classe Sistema
-             * Como nao foi implementado um CRUD completo para funcionarios, exibimos os dados
-             * que estao cadastrados no sistema.
-             * 
-             * Funcionarios cadastrados atualmente:
-             * - ID: 1 | Marcos da Silva | 111.222.333-44 | Recepcao
-             * - ID: 2 | Maria | 999.888.777-66 | Gerente
-             */
             System.out.printf("| %-5d | %-30s | %-15s | %-15s |%n", 1, "Marcos da Silva", "111.222.333-44", "Recepcao");
             System.out.printf("| %-5d | %-30s | %-15s | %-15s |%n", 2, "Maria", "999.888.777-66", "Gerente");
             System.out.println("+-------+--------------------------------+-----------------+-----------------+");
             
-            System.out.println("\n[INFO] Para listar funcionarios dinamicamente, seria necessario");
-            System.out.println("       implementar o metodo listarFuncionarios() no Sistema.");
+            System.out.println("\n[INFO] Funcionarios cadastrados no sistema.");
             
             System.out.println("\nPressione ENTER para continuar...");
             scanner.nextLine();
@@ -734,24 +872,12 @@ public class TrabalhoHotel {
     }
 
     // ==================== METODOS AUXILIARES ====================
-    
-    /**
-     * Le uma string do usuario
-     * 
-     * @param mensagem Mensagem a ser exibida antes da leitura
-     * @return String lida do usuario
-     */
+
     private static String lerString(String mensagem) {
         System.out.print(mensagem);
         return scanner.nextLine();
     }
 
-    /**
-     * Le um numero inteiro do usuario com validacao
-     * 
-     * @param mensagem Mensagem a ser exibida antes da leitura
-     * @return Inteiro lido do usuario
-     */
     private static int lerInteiro(String mensagem) {
         while (true) {
             try {
@@ -763,13 +889,6 @@ public class TrabalhoHotel {
         }
     }
 
-    /**
-     * Le um numero double do usuario com validacao
-     * Aceita tanto ponto (.) quanto virgula (,) como separador decimal
-     * 
-     * @param mensagem Mensagem a ser exibida antes da leitura
-     * @return Double lido do usuario
-     */
     private static double lerDouble(String mensagem) {
         while (true) {
             try {
