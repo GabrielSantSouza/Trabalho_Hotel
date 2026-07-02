@@ -14,10 +14,14 @@ public class Quarto {
     private double valorDiaria;
     private boolean ocupado;
     
-    public Quarto(int numero, int capacidade, double valorDiaria){
+    private Quarto(int numero, int capacidade, double valorDiaria){
         this.numero = numero;
         this.capacidade = capacidade;
         this.valorDiaria = valorDiaria;
+    }
+    
+    public static Quarto criar(int numero, int capacidade, double valorDiaria) {
+        return new Quarto(numero, capacidade, valorDiaria);
     }
     
     public int getNumero(){
